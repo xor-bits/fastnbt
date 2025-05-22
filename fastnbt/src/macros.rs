@@ -268,12 +268,12 @@ macro_rules! nbt_internal {
     };
 
     ({}) => {
-        $crate::Value::Compound(std::collections::HashMap::new())
+        $crate::Value::Compound(std::collections::BTreeMap::new())
     };
 
     ({ $($tt:tt)+ }) => {
         $crate::Value::Compound({
-            let mut object = std::collections::HashMap::new();
+            let mut object = std::collections::BTreeMap::new();
             nbt_internal!(@object object () ($($tt)+) ($($tt)+));
             object
         })

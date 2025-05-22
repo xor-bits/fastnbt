@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Cursor, iter::FromIterator};
+use std::{collections::BTreeMap, io::Cursor, iter::FromIterator};
 
 use crate::{
     borrow, from_bytes, from_bytes_with_opts,
@@ -297,7 +297,7 @@ fn serialize_str() {
 
 #[test]
 fn hashmap() {
-    let v = HashMap::<_, _>::from_iter([("a", 123), ("b", 234)]);
+    let v = BTreeMap::<_, _>::from_iter([("a", 123), ("b", 234)]);
     let expected1 = Builder::new()
         .start_compound("")
         .int("a", 123)
@@ -454,7 +454,7 @@ fn nbt_long_array() {
 #[test]
 fn value_hashmap() {
     // let v = Value::Unit;
-    let v = Value::Compound(HashMap::from_iter([
+    let v = Value::Compound(BTreeMap::from_iter([
         ("a".to_string(), Value::Int(123)),
         ("b".to_string(), Value::Byte(123)),
     ]));
@@ -716,7 +716,7 @@ fn cesu_bytes() {
 
 #[test]
 fn bytes_as_fields() {
-    let mut map = HashMap::new();
+    let mut map = BTreeMap::new();
     map.insert(Bytes::new(b"hello"), "world");
 
     let expected = Builder::new()
@@ -828,7 +828,7 @@ fn no_root() {
     assert!(to_bytes(&"hello").is_err());
     assert!(to_bytes(&vec![1]).is_err());
 
-    assert!(to_bytes(&HashMap::<&str, ()>::new()).is_ok());
+    assert!(to_bytes(&BTreeMap::<&str, ()>::new()).is_ok());
 }
 
 #[test]
@@ -930,7 +930,7 @@ fn serialize_root_with_name() {
     to_writer_with_opts(&mut actual_via_writer, &Empty {}, opts.clone()).unwrap();
 
     let actual_via_bytes = to_bytes_with_opts(&Empty {}, opts.clone()).unwrap();
-    let actual_value = to_bytes_with_opts(&Value::Compound(HashMap::new()), opts.clone()).unwrap();
+    let actual_value = to_bytes_with_opts(&Value::Compound(BTreeMap::new()), opts.clone()).unwrap();
 
     assert_eq!(actual_via_bytes, expected);
     assert_eq!(actual_via_writer.into_inner(), expected);

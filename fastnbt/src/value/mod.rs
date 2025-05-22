@@ -2,7 +2,7 @@ mod array_serializer;
 mod de;
 mod ser;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::{serde_if_integer128, Deserialize, Serialize};
 
@@ -18,11 +18,11 @@ pub use self::ser::Serializer;
 /// ```no_run
 /// # use fastnbt::Value;
 /// # use fastnbt::error::Result;
-/// # use std::collections::HashMap;
+/// # use std::collections::BTreeMap;
 /// #
 /// # fn main() -> Result<()> {
 /// #   let mut buf = vec![];
-///     let compound: HashMap<String, Value> = fastnbt::from_bytes(buf.as_slice())?;
+///     let compound: BTreeMap<String, Value> = fastnbt::from_bytes(buf.as_slice())?;
 ///     match compound["DataVersion"] {
 ///         Value::Int(ver) => println!("Version: {}", ver),
 ///         _ => {},
@@ -44,7 +44,7 @@ pub enum Value {
     IntArray(IntArray),
     LongArray(LongArray),
     List(Vec<Value>),
-    Compound(HashMap<String, Value>),
+    Compound(BTreeMap<String, Value>),
 }
 
 #[cfg(feature = "arbitrary1")]

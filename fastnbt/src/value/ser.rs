@@ -1,5 +1,5 @@
 use core::result;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::{ser::Impossible, serde_if_integer128, Serialize};
 
@@ -275,7 +275,7 @@ impl<'a> serde::Serializer for &'a mut Serializer {
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
         Ok(SerializeMap {
-            map: HashMap::new(),
+            map: BTreeMap::new(),
             next_key: None,
         })
     }
@@ -293,7 +293,7 @@ impl<'a> serde::Serializer for &'a mut Serializer {
     ) -> Result<Self::SerializeStructVariant> {
         Ok(SerializeStructVariant {
             name: variant.into(),
-            map: HashMap::new(),
+            map: BTreeMap::new(),
         })
     }
 
@@ -327,13 +327,13 @@ pub struct SerializeTupleVariant {
 }
 
 pub struct SerializeMap {
-    map: HashMap<String, Value>,
+    map: BTreeMap<String, Value>,
     next_key: Option<String>,
 }
 
 pub struct SerializeStructVariant {
     name: String,
-    map: HashMap<String, Value>,
+    map: BTreeMap<String, Value>,
 }
 
 impl serde::ser::SerializeSeq for SerializeVec {
@@ -398,7 +398,7 @@ impl serde::ser::SerializeTupleVariant for SerializeTupleVariant {
     }
 
     fn end(self) -> Result<Value> {
-        let mut object = HashMap::new();
+        let mut object = BTreeMap::new();
 
         object.insert(self.name, Value::List(self.vec));
 
@@ -624,9 +624,9 @@ impl serde::Serializer for MapKeySerializer {
         Err(key_must_be_a_string())
     }
 
-    fn collect_str<T: ?Sized>(self, value: &T) -> Result<String>
+    fn collect_str<T>(self, value: &T) -> Result<String>
     where
-        T: std::fmt::Display,
+        T: std::fmt::Display + ?Sized,
     {
         Ok(value.to_string())
     }
@@ -661,7 +661,7 @@ impl serde::ser::SerializeStructVariant for SerializeStructVariant {
     }
 
     fn end(self) -> Result<Value> {
-        let mut object = HashMap::new();
+        let mut object = BTreeMap::new();
 
         object.insert(self.name, Value::Compound(self.map));
 

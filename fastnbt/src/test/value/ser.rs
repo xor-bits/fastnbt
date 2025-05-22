@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::Serialize;
 
@@ -43,7 +43,7 @@ fn simple_types() {
 
     let val = to_value(v).unwrap();
     // Note: we cannot use the nbt! macro here as that uses the `to_value` function
-    let expected = Value::Compound(HashMap::from([
+    let expected = Value::Compound(BTreeMap::from([
         ("bool".to_string(), Value::Byte(1)),
         ("i8".to_string(), Value::Byte(i8::MAX)),
         ("i16".to_string(), Value::Short(i16::MAX)),
@@ -83,7 +83,7 @@ fn int_array_types() {
     };
 
     let val = to_value(v).unwrap();
-    let expected = Value::Compound(HashMap::from([
+    let expected = Value::Compound(BTreeMap::from([
         (
             "i128".to_string(),
             // Only left most bit is 0
@@ -135,14 +135,14 @@ fn nested() {
     };
 
     let val = to_value(v).unwrap();
-    let expected = Value::Compound(HashMap::from([
+    let expected = Value::Compound(BTreeMap::from([
         (
             "list".to_string(),
             Value::List(vec![Value::Short(1), Value::Short(2)]),
         ),
         (
             "nested".to_string(),
-            Value::Compound(HashMap::from([("key".to_string(), Value::Byte(42))])),
+            Value::Compound(BTreeMap::from([("key".to_string(), Value::Byte(42))])),
         ),
     ]));
 

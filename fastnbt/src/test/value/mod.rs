@@ -1,7 +1,7 @@
-mod ser;
 mod de;
+mod ser;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::{from_bytes, to_bytes, Tag, Value};
 
@@ -118,7 +118,7 @@ fn distinguish_floats() {
 #[test]
 fn fuzz_float() {
     let v = Value::Float(1.4e-44);
-    let mut inner = HashMap::new();
+    let mut inner = BTreeMap::new();
     inner.insert("".to_string(), v);
 
     let v = Value::Compound(inner);
