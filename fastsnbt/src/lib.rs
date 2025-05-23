@@ -33,10 +33,10 @@ use error::Result;
 use ser::Serializer;
 use serde::Serialize;
 
-pub mod ser;
 pub mod de;
 pub mod error;
 pub(crate) mod parser;
+pub mod ser;
 
 pub(crate) const BYTE_ARRAY_TOKEN_STR: &str = "\"__fastnbt_byte_array\"";
 pub(crate) const INT_ARRAY_TOKEN_STR: &str = "\"__fastnbt_int_array\"";
@@ -65,7 +65,10 @@ where
 /// Serialize some `T` into some sNBT string. This produces
 /// valid utf-8. See the [`ser`] module for more information.
 pub fn to_vec<T: ?Sized + Serialize>(value: &T) -> Result<Vec<u8>> {
-    let mut serializer = Serializer { writer: Vec::new() };
+    let mut serializer = Serializer {
+        writer: Vec::new(),
+        indent: None,
+    };
     value.serialize(&mut serializer)?;
     Ok(serializer.writer)
 }
@@ -74,6 +77,28 @@ pub fn to_vec<T: ?Sized + Serialize>(value: &T) -> Result<Vec<u8>> {
 /// module for more information.
 pub fn to_string<T: ?Sized + Serialize>(value: &T) -> Result<String> {
     let vec = to_vec(value)?;
+    let string = unsafe {
+        // We do not emit invalid UTF-8.
+        String::from_utf8_unchecked(vec)
+    };
+    Ok(string)
+}
+
+/// Serialize some `T` into some sNBT string. This produces
+/// valid utf-8. See the [`ser`] module for more information.
+pub fn to_vec_pretty<T: ?Sized + Serialize>(value: &T) -> Result<Vec<u8>> {
+    let mut serializer = Serializer {
+        writer: Vec::new(),
+        indent: Some(0),
+    };
+    value.serialize(&mut serializer)?;
+    Ok(serializer.writer)
+}
+
+/// Serialize some `T` into a sNBT string. See the [`ser`]
+/// module for more information.
+pub fn to_string_pretty<T: ?Sized + Serialize>(value: &T) -> Result<String> {
+    let vec = to_vec_pretty(value)?;
     let string = unsafe {
         // We do not emit invalid UTF-8.
         String::from_utf8_unchecked(vec)

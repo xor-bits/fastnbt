@@ -14,14 +14,17 @@
 
 use std::io::Write;
 
-use serde::ser::{self, SerializeSeq, SerializeTuple, SerializeTupleStruct, SerializeTupleVariant, SerializeMap, SerializeStruct, Impossible};
+use serde::ser::{
+    self, Impossible, SerializeMap, SerializeSeq, SerializeStruct, SerializeTuple,
+    SerializeTupleStruct, SerializeTupleVariant,
+};
 
 use crate::{error::Error, BYTE_ARRAY_TOKEN_STR, INT_ARRAY_TOKEN_STR, LONG_ARRAY_TOKEN_STR};
 
 use self::name_serializer::NameSerializer;
 
-mod name_serializer;
 mod array_serializer;
+mod name_serializer;
 
 pub(crate) fn write_escaped_str<W: Write>(mut writer: W, v: &str) -> Result<(), Error> {
     writer.write_all(b"\"")?;
@@ -49,6 +52,27 @@ pub(crate) fn write_escaped_str<W: Write>(mut writer: W, v: &str) -> Result<(), 
 
 pub struct Serializer<W> {
     pub(crate) writer: W,
+    pub(crate) indent: Option<usize>,
+}
+
+impl<W: Write> Serializer<W> {
+    pub fn newline(&mut self) -> Result<(), Error> {
+        if let Some(indent) = self.indent {
+            self.writer.write_all(b"\n")?;
+            for _ in 0..indent {
+                self.writer.write_all(b"    ")?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn push_indent(&mut self) {
+        self.indent = self.indent.map(|indent| indent.saturating_add(1));
+    }
+
+    pub fn pop_indent(&mut self) {
+        self.indent = self.indent.map(|indent| indent.saturating_sub(1));
+    }
 }
 
 impl<'a, W: 'a + Write> ser::Serializer for &'a mut Serializer<W> {
@@ -156,7 +180,7 @@ impl<'a, W: 'a + Write> ser::Serializer for &'a mut Serializer<W> {
 
     fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         value.serialize(self)
     }
@@ -186,7 +210,7 @@ impl<'a, W: 'a + Write> ser::Serializer for &'a mut Serializer<W> {
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         value.serialize(self)
     }
@@ -199,7 +223,7 @@ impl<'a, W: 'a + Write> ser::Serializer for &'a mut Serializer<W> {
         _value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         Err(Error::bespoke(
             "cannot serialize newtype variant, please open fastnbt issue".to_string(),
@@ -262,13 +286,19 @@ impl<'a, W: 'a + Write> ser::Serializer for &'a mut Serializer<W> {
 pub struct ArraySerializer<'a, W> {
     first: bool,
     serializer: &'a mut Serializer<W>,
+    prefix: &'static str,
 }
 
 impl<'a, W: Write> ArraySerializer<'a, W> {
-    pub fn new(prefix: &'static str, serializer: &'a mut Serializer<W>) -> Result<ArraySerializer<'a, W>, Error> {
-        serializer.writer.write_all(b"[")?;
-        serializer.writer.write_all(prefix.as_bytes())?;
-        Ok(Self { first: false, serializer })
+    pub fn new(
+        prefix: &'static str,
+        serializer: &'a mut Serializer<W>,
+    ) -> Result<ArraySerializer<'a, W>, Error> {
+        Ok(Self {
+            first: false,
+            serializer,
+            prefix,
+        })
     }
 }
 
@@ -278,17 +308,30 @@ impl<'a, W: Write> SerializeSeq for ArraySerializer<'a, W> {
 
     fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         if !self.first {
             self.first = true;
+
+            self.serializer.writer.write_all(b"[")?;
+            self.serializer.push_indent();
+            self.serializer.newline()?;
+            self.serializer.writer.write_all(self.prefix.as_bytes())?;
         } else {
             self.serializer.writer.write_all(b",")?;
         }
+        self.serializer.newline()?;
         value.serialize(&mut *self.serializer)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
+        if self.first {
+            self.serializer.pop_indent();
+            self.serializer.newline()?;
+        } else {
+            self.serializer.writer.write_all(b"[")?;
+            self.serializer.writer.write_all(self.prefix.as_bytes())?;
+        }
         Ok(self.serializer.writer.write_all(b"]")?)
     }
 }
@@ -299,7 +342,8 @@ impl<'a, W: Write + 'a> SerializeTuple for ArraySerializer<'a, W> {
 
     fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: serde::Serialize {
+        T: serde::Serialize,
+    {
         SerializeSeq::serialize_element(self, value)
     }
 
@@ -314,7 +358,7 @@ impl<'a, W: Write + 'a> SerializeTupleStruct for ArraySerializer<'a, W> {
 
     fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         SerializeSeq::serialize_element(self, value)
     }
@@ -330,7 +374,7 @@ impl<'a, W: Write + 'a> SerializeTupleVariant for ArraySerializer<'a, W> {
 
     fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         SerializeSeq::serialize_element(self, value)
     }
@@ -364,7 +408,7 @@ impl<'a, W: Write + 'a> SerializeMap for CompoundSerializer<'a, W> {
 
     fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         let mut name = Vec::new();
         key.serialize(&mut NameSerializer { name: &mut name })?;
@@ -374,7 +418,7 @@ impl<'a, W: Write + 'a> SerializeMap for CompoundSerializer<'a, W> {
 
     fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         let name = self.key.take().ok_or_else(|| {
             Error::bespoke("serialize_value called before serialize_key".to_string())
@@ -384,6 +428,7 @@ impl<'a, W: Write + 'a> SerializeMap for CompoundSerializer<'a, W> {
             self.has_first = true;
         } else {
             self.serializer.writer.write_all(b",")?;
+            self.serializer.newline()?;
         }
 
         match std::str::from_utf8(&name) {
@@ -406,9 +451,16 @@ impl<'a, W: Write + 'a> SerializeMap for CompoundSerializer<'a, W> {
                 if !self.is_compound {
                     self.is_compound = true;
                     self.serializer.writer.write_all(b"{")?;
+                    self.serializer.push_indent();
+                    self.serializer.newline()?;
                 }
                 self.serializer.writer.write_all(&name)?;
-                self.serializer.writer.write_all(b":")?;
+                let sep: &[u8] = if self.serializer.indent.is_some() {
+                    b": "
+                } else {
+                    b":"
+                };
+                self.serializer.writer.write_all(sep)?;
                 value.serialize(&mut *self.serializer)
             }
         }
@@ -416,7 +468,11 @@ impl<'a, W: Write + 'a> SerializeMap for CompoundSerializer<'a, W> {
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
         if self.is_compound {
+            self.serializer.pop_indent();
+            self.serializer.newline()?;
             self.serializer.writer.write_all(b"}")?;
+        } else if !self.has_first {
+            self.serializer.writer.write_all(b"{}")?;
         }
         Ok(())
     }
@@ -432,13 +488,12 @@ impl<'a, W: Write + 'a> SerializeStruct for CompoundSerializer<'a, W> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: serde::Serialize
+        T: serde::Serialize,
     {
         SerializeMap::serialize_entry(self, key, value)
     }
 
-    fn end(self) -> Result<Self::Ok, Self::Error>
-    {
+    fn end(self) -> Result<Self::Ok, Self::Error> {
         SerializeMap::end(self)
     }
 }
