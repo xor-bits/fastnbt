@@ -93,3 +93,12 @@ fn test_longarray() {
     let data: LongArray = from_str(input).unwrap();
     assert_eq!(LongArray::new(vec![1, 2, -3]), data);
 }
+
+#[test]
+fn test_whitespaced_longarray() {
+    let input = " \n\t[   L;
+    \n1l\t,\t\t\t\n2L\n,
+-3l\n\n\n\n\n              ]\n\n\n";
+    let data: LongArray = from_str(input).unwrap();
+    assert_eq!(LongArray::new(vec![1, 2, -3]), data);
+}

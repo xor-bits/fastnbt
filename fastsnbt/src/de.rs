@@ -50,7 +50,12 @@ impl<'a, 'de: 'a> Deserializer<'de> {
         self.input = new_input;
     }
 
+    pub(crate) fn skip_ws(&mut self) {
+        self.advance(self.input.trim_start());
+    }
+
     pub(crate) fn starts_delimiter(&mut self, start: &str) -> bool {
+        self.skip_ws();
         if self.input.starts_with(start) {
             let input = &self.input[start.len()..];
             self.advance(input);
@@ -61,6 +66,7 @@ impl<'a, 'de: 'a> Deserializer<'de> {
     }
 
     pub(crate) fn end_delimiter(&'a mut self, end: &'de str) -> Result<&'de str, Error> {
+        self.skip_ws();
         if !self.input.starts_with(end) {
             Err(Error::expected_collection_end())
         } else {
@@ -76,6 +82,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: de::Visitor<'de>,
     {
+        self.skip_ws();
+
         if self.input.is_empty() {
             return Err(Error::unexpected_eof());
         }
@@ -101,27 +109,31 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 Cow::Owned(v) => visitor.visit_str(&v),
             }
             .map(|v| (input, v))
-        } else if self.starts_delimiter("[B;") {
-            match visitor.visit_map(ArrayWrapperAccess::bytes(self)) {
-                Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
-                Err(e) => Err(e),
-            }
-        } else if self.starts_delimiter("[I;") {
-            match visitor.visit_map(ArrayWrapperAccess::ints(self)) {
-                Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
-                Err(e) => Err(e),
-            }
-        } else if self.starts_delimiter("[L;") {
-            match visitor.visit_map(ArrayWrapperAccess::longs(self)) {
-                Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
-                Err(e) => Err(e),
-            }
         } else if self.starts_delimiter("[") {
-            match visitor.visit_seq(CommaSep::new(self)) {
-                Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
-                Err(e) => Err(e),
+            self.skip_ws();
+            if self.starts_delimiter("B;") {
+                match visitor.visit_map(ArrayWrapperAccess::bytes(self)) {
+                    Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
+                    Err(e) => Err(e),
+                }
+            } else if self.starts_delimiter("I;") {
+                match visitor.visit_map(ArrayWrapperAccess::ints(self)) {
+                    Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
+                    Err(e) => Err(e),
+                }
+            } else if self.starts_delimiter("L;") {
+                match visitor.visit_map(ArrayWrapperAccess::longs(self)) {
+                    Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
+                    Err(e) => Err(e),
+                }
+            } else {
+                match visitor.visit_seq(CommaSep::new(self)) {
+                    Ok(v) => self.end_delimiter("]").map(|input| (input, v)),
+                    Err(e) => Err(e),
+                }
             }
         } else if self.starts_delimiter("{") {
+            self.skip_ws();
             match visitor.visit_map(CommaSep::new(self)) {
                 Ok(v) => self.end_delimiter("}").map(|input| (input, v)),
                 Err(e) => Err(e),
@@ -131,6 +143,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         }?;
 
         self.advance(input);
+        self.skip_ws();
         Ok(value)
     }
 
@@ -215,6 +228,7 @@ impl<'a, 'de> MapAccess<'de> for CommaSep<'a, 'de> {
     where
         K: de::DeserializeSeed<'de>,
     {
+        self.de.skip_ws();
         if self.de.input.starts_with('}') {
             return Ok(None);
         }
@@ -231,6 +245,7 @@ impl<'a, 'de> MapAccess<'de> for CommaSep<'a, 'de> {
             return Err(Error::expected_comma());
         } else if !self.first {
             self.de.advance(&self.de.input[','.len_utf8()..]);
+            self.de.skip_ws();
         }
         self.first = false;
         seed.deserialize(&mut *self.de).map(Some)
@@ -240,6 +255,7 @@ impl<'a, 'de> MapAccess<'de> for CommaSep<'a, 'de> {
     where
         V: de::DeserializeSeed<'de>,
     {
+        self.de.skip_ws();
         if self
             .de
             .input
@@ -251,6 +267,7 @@ impl<'a, 'de> MapAccess<'de> for CommaSep<'a, 'de> {
             return Err(Error::expected_colon());
         } else {
             self.de.advance(&self.de.input[':'.len_utf8()..]);
+            self.de.skip_ws();
         }
         seed.deserialize(&mut *self.de)
     }
