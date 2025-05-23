@@ -315,8 +315,10 @@ impl<'a, W: Write> SerializeSeq for ArraySerializer<'a, W> {
 
             self.serializer.writer.write_all(b"[")?;
             self.serializer.push_indent();
-            self.serializer.newline()?;
-            self.serializer.writer.write_all(self.prefix.as_bytes())?;
+            if !self.prefix.is_empty() {
+                self.serializer.newline()?;
+                self.serializer.writer.write_all(self.prefix.as_bytes())?;
+            }
         } else {
             self.serializer.writer.write_all(b",")?;
         }
