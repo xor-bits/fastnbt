@@ -314,7 +314,10 @@ pub fn make_palette(mc_jar_path: &Path) -> Result<()> {
             texture_template: "minecraft:block/mangrove_roots_top",
         },
         RegexMapping {
-            blockstate: Regex::new(r"minecraft:(pumpkin|melon|attached_melon|attached_pumpkin|big_dripleaf)_stem").unwrap(),
+            blockstate: Regex::new(
+                r"minecraft:(pumpkin|melon|attached_melon|attached_pumpkin|big_dripleaf)_stem",
+            )
+            .unwrap(),
             texture_template: "minecraft:block/$1",
         },
         RegexMapping {

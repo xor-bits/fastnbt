@@ -18,8 +18,8 @@
 //!   This feature is enabled by default and encapsulates all world-rendering related functionality.
 
 pub mod biome;
-pub mod tex;
 pub mod complete;
+pub mod tex;
 
 mod bits;
 mod dimension;

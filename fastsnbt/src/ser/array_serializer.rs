@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use byteorder::{ReadBytesExt, BigEndian};
+use byteorder::{BigEndian, ReadBytesExt};
 use serde::ser::{Impossible, SerializeSeq};
 
 use crate::{error::Error, error::Result};
@@ -56,11 +56,16 @@ impl<'a, W: Write> serde::Serializer for ArraySerializer<'a, W> {
         match self.stride {
             1 => {
                 let data = unsafe { &*(v as *const [u8] as *const [i8]) };
-                data.iter().try_for_each(|i| SerializeSeq::serialize_element(&mut serializer, i))?
+                data.iter()
+                    .try_for_each(|i| SerializeSeq::serialize_element(&mut serializer, i))?
             }
-            4 => v.chunks_exact(4).map(|mut bs| bs.read_i32::<BigEndian>())
+            4 => v
+                .chunks_exact(4)
+                .map(|mut bs| bs.read_i32::<BigEndian>())
                 .try_for_each(|i| SerializeSeq::serialize_element(&mut serializer, &i?))?,
-            8 => v.chunks_exact(8).map(|mut bs| bs.read_i64::<BigEndian>())
+            8 => v
+                .chunks_exact(8)
+                .map(|mut bs| bs.read_i64::<BigEndian>())
                 .try_for_each(|l| SerializeSeq::serialize_element(&mut serializer, &l?))?,
             _ => panic!(),
         }

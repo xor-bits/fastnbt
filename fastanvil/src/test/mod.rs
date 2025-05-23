@@ -7,10 +7,10 @@ use std::{collections::hash_map::DefaultHasher, hash::Hasher};
 
 use fastnbt::{nbt, LongArray, Value};
 
+mod complete_chunk;
 mod region;
 mod rogue_chunks;
 mod section_data;
-mod complete_chunk;
 #[cfg(feature = "render")]
 mod standard_chunks;
 mod unicode_chunk;

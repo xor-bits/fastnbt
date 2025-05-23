@@ -1,7 +1,7 @@
 use fastnbt::IntArray;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use crate::{to_string, from_str};
+use crate::{from_str, to_string};
 
 mod de_tests;
 mod ser_tests;
@@ -20,7 +20,7 @@ fn test_mixed() {
         name: "Cool \"name\"".into(),
         ints: IntArray::new(vec![-1, 3, 2000]),
         f: -5.0e-40,
-        collection: vec![true, false, true, true]
+        collection: vec![true, false, true, true],
     };
     let serialized = to_string(&data).unwrap();
     assert_eq!("{\"name\":\"Cool \\\"name\\\"\",\"ints\":[I;-1,3,2000],\"f\":-5e-40,\"collection\":[true,false,true,true]}", serialized);

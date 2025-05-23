@@ -46,8 +46,8 @@ impl<S> SectionTower<S> {
 
 impl<'de, S: SectionLike + Deserialize<'de>> Deserialize<'de> for SectionTower<S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>,
+    where
+        D: serde::Deserializer<'de>,
     {
         let sections: Vec<S> = Deserialize::deserialize(deserializer)?;
         if sections.is_empty() {
